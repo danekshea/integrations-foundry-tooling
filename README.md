@@ -1,66 +1,24 @@
-## Foundry
-
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
 ## Usage
 
-### Build
-
 ```shell
-$ forge build
+yarn
+forge build
 ```
 
-### Test
+1. Obtain not delivered cross chain source transaction hash
+2. Go to Scan API URL: mainnet: https://scan.layerzero-api.com/v1/messages/tx/YOUR_SOURCE_TX_HASH ; testnet: https://scan-testnet.layerzero-api.com/v1/messages/tx/YOUR_SOURCE_TX_HASH
+3. Copy whole JSON response of that API and replace content of [data/scanApiResponse.json](./data/scanApiResponse.json) file.
+4. Run: `forge script script/SimulateReceive.s.sol --rpc-url YOUR_DESTINATION_CHAIN_RPC_URL`
 
-```shell
-$ forge test
+Remember to replace `YOUR_SOURCE_TX_HASH` and `YOUR_DESTINATION_CHAIN_RPC_URL` with correct values.
+
+If you get an error from SimulateReceive script eg. `script failed: custom error 7182306f` you can do:
+
+```
+cast 4byte 7182306f
 ```
 
-### Format
-
-```shell
-$ forge fmt
+Example result:
 ```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+LZ_PayloadHashNotFound(bytes32,bytes32)
 ```
