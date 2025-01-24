@@ -15,18 +15,35 @@ contract SimulateReceive is Script {
     using Base58Decoder for string; // Use the library
 
     function run() public {
-        // Read the JSON file
-        string memory json = vm.readFile("./data/scanApiResponse.json");
+        // Define the transaction hash as a variable
+        string memory txHash = "0x0c61c4db115f57b2fba78df78879f9e8230e67d75e78ac2782a3b4c929b5d12f";
+
+        // Use Foundry's ffi to call curl and fetch the JSON data
+        string[] memory curlCommand = new string[](5);
+        curlCommand[0] = "curl";
+        curlCommand[1] = "-X";
+        curlCommand[2] = "GET";
+        curlCommand[3] = string(abi.encodePacked("https://scan.layerzero-api.com/v1/messages/tx/", txHash));
+        curlCommand[4] = "-H 'accept: application/json'";
+
+        // Execute the curl command
+        bytes memory result = vm.ffi(curlCommand);
+
+        // Convert the result to a string
+        string memory json = string(result);
 
         // Read the sender chain
         string memory senderChain = json.readString(".data[0].pathway.sender.chain");
 
+        // Read the destination chain
+        string memory destinationChain = json.readString(".data[0].pathway.receiver.chain");
+
         // Read the sender address
         bytes32 senderBytes32;
+        string memory senderAddressStr = json.readString(".data[0].pathway.sender.address");
         if (keccak256(bytes(senderChain)) == keccak256(bytes("solana"))) {
             // If the chain is Solana, decode the Base58 address
-            string memory base58Address = json.readString(".data[0].pathway.sender.address");
-            bytes memory decodedAddress = base58Address.base58ToHex();
+            bytes memory decodedAddress = senderAddressStr.base58ToHex();
 
             // Ensure the decoded address is 32 bytes long
             require(decodedAddress.length == 32, "Decoded address must be 32 bytes");
@@ -36,11 +53,22 @@ contract SimulateReceive is Script {
             address senderAddress = json.readAddress(".data[0].pathway.sender.address");
             senderBytes32 = addressToBytes32(senderAddress);
         }
+        console.log("Sender: %s (%s)", senderAddressStr, senderChain);
+
+        // Read the receiver address
+        address receiver = json.readAddress(".data[0].pathway.receiver.address");
+        console.log("Receiver: %s (%s)", receiver, destinationChain);
+
+        // Read the nonce
+        uint64 nonce = uint64(json.readUint(".data[0].pathway.nonce"));
+        console.log("Nonce:", nonce);
+
+        // Read the transaction hash
+        string memory fetchedTxHash = json.readString(".data[0].source.tx.txHash");
+        console.log("Source Transaction Hash:", fetchedTxHash);
 
         // Read other fields from the JSON
         uint32 srcEid = uint32(json.readUint(".data[0].pathway.srcEid"));
-        uint64 nonce = uint64(json.readUint(".data[0].pathway.nonce"));
-        address receiver = json.readAddress(".data[0].pathway.receiver.address");
         bytes32 guid = json.readBytes32(".data[0].guid");
         bytes memory payload = json.readBytes(".data[0].source.tx.payload");
 
