@@ -89,6 +89,7 @@ contract SimulateReceive is Script {
         // Simulate the lzReceive function
         vm.startBroadcast();
         IOAppCore(receiver).endpoint().lzReceive(origin, receiver, guid, payload, extraData);
+        vm.stopBroadcast();
     }
 
     // Helper function to convert address to bytes32
