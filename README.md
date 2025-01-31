@@ -10,8 +10,6 @@ forge build
 4. Run: `forge script script/SimulateReceive.s.sol --rpc-url YOUR_DESTINATION_CHAIN_RPC_URL --ffi`
 5. (Optional) Add `--broadcast` and `--private-key YOUR_PRIVATE_KEY` to broadcast the transaction to the destination chain
 
-TIP: Use [Stargate](https://stargate.finance/bridge?srcChain=base&srcToken=0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE&dstChain=ethereum&dstToken=0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE) with a native drop if you need gas on the destination chain.
-
 If you get an error from SimulateReceive script eg. `script failed: custom error 7182306f` you can do:
 
 ```
