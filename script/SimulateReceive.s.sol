@@ -14,16 +14,22 @@ contract SimulateReceive is Script {
     using stdJson for string;
     using Base58Decoder for string; // Use the library
 
-    function run() public {
-        // Define the transaction hash as a variable
-        string memory txHash = "0x0c61c4db115f57b2fba78df78879f9e8230e67d75e78ac2782a3b4c929b5d12f";
+       function run() public {
+        // -- New mainnet/testnet toggle added here --
+        bool mainnet = true; // Set to false for testnet
+        string memory txHash = "0x88a79d59222628aba22c5c616580212c80beae353aaa8ffbd3976dd5aa5d12f8";
 
-        // Use Foundry's ffi to call curl and fetch the JSON data
         string[] memory curlCommand = new string[](5);
         curlCommand[0] = "curl";
         curlCommand[1] = "-X";
         curlCommand[2] = "GET";
-        curlCommand[3] = string(abi.encodePacked("https://scan.layerzero-api.com/v1/messages/tx/", txHash));
+        curlCommand[3] = string(abi.encodePacked(
+            mainnet ? 
+            "https://scan.layerzero-api.com" :    // Mainnet
+            "https://scan-testnet.layerzero-api.com", // Testnet
+            "/v1/messages/tx/", 
+            txHash
+        ));
         curlCommand[4] = "-H 'accept: application/json'";
 
         // Execute the curl command
