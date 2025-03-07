@@ -16,8 +16,8 @@ contract SimulateReceive is Script {
 
        function run() public {
         // -- New mainnet/testnet toggle added here --
-        bool mainnet = false; // Set to false for testnet
-        string memory sourceChainTXHash = "0xdf1225cb2d3f69454ab6ac94784d80a21fc777206c0417c2d1df43182cfc796f";
+        bool mainnet = vm.envBool("MAINNET"); // Set to false for testnet
+        string memory sourceChainTXHash = vm.envString("SOURCE_CHAIN_TX_HASH");
 
         string[] memory curlCommand = new string[](5);
         curlCommand[0] = "curl";
