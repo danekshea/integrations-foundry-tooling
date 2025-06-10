@@ -6,7 +6,7 @@ export $(shell sed 's/=.*//' .env)
 .PHONY: simulate broadcast 
 
 simulate:
-	forge script script/SimulateReceive.s.sol --rpc-url $(DESTINATION_CHAIN_RPC_URL) --account burner -vvvv
+	forge script script/lzReceive.s.sol --rpc-url $(DESTINATION_CHAIN_RPC_URL) --account $(CAST_ACCOUNT)
 
 broadcast:
-	forge script script/SimulateReceive.s.sol --rpc-url $(DESTINATION_CHAIN_RPC_URL) --account burner --broadcast
+	forge script script/lzReceive.s.sol --rpc-url $(DESTINATION_CHAIN_RPC_URL) --account $(CAST_ACCOUNT) --broadcast
