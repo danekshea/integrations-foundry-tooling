@@ -1,15 +1,19 @@
 ## Usage
 
 ```shell
+cp .env.example .env
 yarn
 forge build
 ```
 
 1. Find the source transaction hash of the message that has failed on [LayerZero Scan](https://layerzeroscan.com)
-2. Paste the transaction hash into `string memory sourceChainTXHash = "0x0c61c4db115f57b2fba78df78879f9e8230e67d75e78ac2782a3b4c929b5d12f";` in [script/SimulateReceive.s.sol](./script/SimulateReceive.s.sol) and set the mainnet boolean to `true` or `false` (for the scan API)
-4. Run: `forge script script/SimulateReceive.s.sol --rpc-url YOUR_DESTINATION_CHAIN_RPC_URL`
-5. (Optional) Add `--broadcast` and `--private-key YOUR_PRIVATE_KEY` or `--account <CAST_WALLET>` to broadcast the transaction to the destination chain
-6. (Optional) If you want this to be super easy, you can use `.env` along with the recipes in the Makefile
+2. Populate the [.env](.env.example) file with the following:
+   - `SOURCE_CHAIN_TX_HASH=<your_source_tx_hash>`
+   - `MAINNET=true` or `MAINNET=false` (for the scan API)
+   - `DESTINATION_CHAIN_RPC_URL=<your_rpc_url>` 
+   - `CAST_ACCOUNT=<your_cast_account>` (use `cast wallet import -i <ACCOUNT_NAME>` to import a private key into cast)
+     - You can optionally use the RPC URL shortcuts in [foundry.toml](foundry.toml), for example `bnb`
+3. Run `make simulate` to simulate the workflow, this assumes you have an account in [cast](https://getfoundry.sh/cast/overview), alternatively you can edit the [Makefile](Makefile) to use `--private-key <PRIVATE_KEY>` instead. Run `make broadcast` to broadcast the transaction.
 
 If you get an error from SimulateReceive script eg. `script failed: custom error 7182306f` you can do:
 

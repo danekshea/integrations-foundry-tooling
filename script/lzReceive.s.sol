@@ -19,24 +19,31 @@ contract SimulateReceive is Script {
         bool mainnet = vm.envBool("MAINNET"); // Set to false for testnet
         string memory sourceChainTXHash = vm.envString("SOURCE_CHAIN_TX_HASH");
 
-        string[] memory curlCommand = new string[](5);
-        curlCommand[0] = "curl";
-        curlCommand[1] = "-X";
-        curlCommand[2] = "GET";
-        curlCommand[3] = string(abi.encodePacked(
-            mainnet ? 
+        string memory apiUrl = string(abi.encodePacked(
+            mainnet ?
             "https://scan.layerzero-api.com" :    // Mainnet
             "https://scan-testnet.layerzero-api.com", // Testnet
-            "/v1/messages/tx/", 
+            "/v1/messages/tx/",
             sourceChainTXHash
         ));
-        curlCommand[4] = "-H 'accept: application/json'";
 
-        // Execute the curl command
-        bytes memory result = vm.ffi(curlCommand);
+        console.log("Fetching LayerZero message details...");
+        console.log(" => TX Hash: %s", sourceChainTXHash);
+        console.log(" => API Endpoint: %s", apiUrl);
+
+        string[] memory curlCommand = new string[](7);
+        curlCommand[0] = "curl";
+        curlCommand[1] = "-s"; // Suppress progress meter.
+        curlCommand[2] = "-X";
+        curlCommand[3] = "GET";
+        curlCommand[4] = apiUrl;
+        curlCommand[5] = "-H";
+        curlCommand[6] = "accept: application/json";
+
+        bytes memory res = vm.ffi(curlCommand);
 
         // Convert the result to a string
-        string memory json = string(result);
+        string memory json = string(res);
 
         // Read the sender chain
         string memory senderChain = json.readString(".data[0].pathway.sender.chain");
@@ -77,6 +84,8 @@ contract SimulateReceive is Script {
         uint32 srcEid = uint32(json.readUint(".data[0].pathway.srcEid"));
         bytes32 guid = json.readBytes32(".data[0].guid");
         bytes memory payload = json.readBytes(".data[0].source.tx.payload");
+
+        console.log("Invoking lzReceive...");
 
         // Construct the Origin struct
         Origin memory origin = Origin({
