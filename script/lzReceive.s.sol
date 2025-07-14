@@ -9,6 +9,7 @@ import { IOAppCore } from "@layerzerolabs/oapp-evm/contracts/oapp/interfaces/IOA
 import { SendParam, OFTReceipt } from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
 import { MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import { ILayerZeroEndpointV2, Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract SimulateReceive is Script {
     using stdJson for string;
@@ -95,9 +96,120 @@ contract SimulateReceive is Script {
         });
         bytes memory extraData = "";
 
-        // Simulate the lzReceive function
+        // === ENHANCED ERROR HANDLING AND DEBUGGING ===
+        
+        // Extract recipient and amount from payload for debugging
+        address recipient;
+        uint256 amount;
+        if (payload.length >= 64) {
+            assembly {
+                recipient := mload(add(payload, 32))
+                amount := mload(add(payload, 64))
+            }
+        }
+        console.log("=== DEBUGGING INFO ===");
+        console.log("Recipient from payload:", recipient);
+        console.log("Amount from payload:", amount);
+        
+        // Get token address from the OFT adapter
+        address tokenAddress;
+        try IOAppCore(receiver).token() returns (address token) {
+            tokenAddress = token;
+            console.log("Token address:", tokenAddress);
+        } catch {
+            console.log("Could not get token address");
+        }
+        
+        // Check recipient balance before
+        uint256 balanceBefore;
+        if (tokenAddress != address(0) && recipient != address(0)) {
+            try IERC20(tokenAddress).balanceOf(recipient) returns (uint256 balance) {
+                balanceBefore = balance;
+                console.log("Recipient balance before:", balanceBefore);
+            } catch {
+                console.log("Could not check balance before");
+            }
+        }
+
+        // Simulate the lzReceive function with enhanced error handling
         vm.startBroadcast();
-        IOAppCore(receiver).endpoint().lzReceive(origin, receiver, guid, payload, extraData);
+        
+        uint256 gasStart = gasleft();
+        console.log("Gas available at start:", gasStart);
+        
+        try IOAppCore(receiver).endpoint().lzReceive(origin, receiver, guid, payload, extraData) {
+            console.log("=== SUCCESS ===");
+            
+            // Check balance after success
+            if (tokenAddress != address(0) && recipient != address(0)) {
+                try IERC20(tokenAddress).balanceOf(recipient) returns (uint256 balanceAfter) {
+                    console.log("Recipient balance after:", balanceAfter);
+                    console.log("Tokens minted:", balanceAfter - balanceBefore);
+                } catch {
+                    console.log("Could not check balance after");
+                }
+            }
+            
+        } catch Error(string memory reason) {
+            console.log("=== STRING REVERT ===");
+            console.log("Revert reason:", reason);
+            
+        } catch Panic(uint errorCode) {
+            console.log("=== PANIC ERROR ===");
+            console.log("Panic code:", errorCode);
+            
+            // Decode common panic codes
+            if (errorCode == 0x01) {
+                console.log("Panic type: Assertion failed (assert)");
+            } else if (errorCode == 0x11) {
+                console.log("Panic type: Arithmetic overflow/underflow");
+            } else if (errorCode == 0x12) {
+                console.log("Panic type: Division by zero");
+            } else if (errorCode == 0x21) {
+                console.log("Panic type: Invalid enum value");
+            } else if (errorCode == 0x22) {
+                console.log("Panic type: Invalid storage byte array access");
+            } else if (errorCode == 0x31) {
+                console.log("Panic type: Pop on empty array");
+            } else if (errorCode == 0x32) {
+                console.log("Panic type: Array index out of bounds");
+            } else if (errorCode == 0x41) {
+                console.log("Panic type: Too much memory allocated");
+            } else if (errorCode == 0x51) {
+                console.log("Panic type: Zero-initialized variable of internal function type");
+            } else {
+                console.log("Panic type: Unknown");
+            }
+            
+        } catch (bytes memory lowLevelData) {
+            console.log("=== LOW LEVEL REVERT ===");
+            console.log("Revert data length:", lowLevelData.length);
+            
+            if (lowLevelData.length == 0) {
+                console.log("Empty revert data - likely assertion failure or require() without message");
+            } else {
+                console.log("Raw revert data:");
+                console.logBytes(lowLevelData);
+                
+                // Try to decode as string
+                if (lowLevelData.length >= 68) {
+                    // Check if it starts with Error(string) selector (0x08c379a0)
+                    bytes4 selector;
+                    assembly {
+                        selector := mload(add(lowLevelData, 32))
+                    }
+                    if (selector == 0x08c379a0) {
+                        // Decode the string
+                        string memory errorMessage = abi.decode(lowLevelData[4:], (string));
+                        console.log("Decoded error message:", errorMessage);
+                    }
+                }
+            }
+        }
+        
+        uint256 gasEnd = gasleft();
+        console.log("Gas used:", gasStart - gasEnd);
+        
         vm.stopBroadcast();
     }
 
