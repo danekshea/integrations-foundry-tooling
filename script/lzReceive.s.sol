@@ -55,7 +55,7 @@ contract SimulateReceive is Script {
         // Read the sender address
         bytes32 senderBytes32;
         string memory senderAddressStr = json.readString(".data[0].pathway.sender.address");
-        if (keccak256(bytes(senderChain)) == keccak256(bytes("solana"))) {
+        if (startsWith(senderChain, "solana")) {
             // If the chain is Solana, decode the Base58 address
             bytes memory decodedAddress = senderAddressStr.base58ToHex();
 
@@ -224,6 +224,24 @@ contract SimulateReceive is Script {
     // Helper function to convert address to bytes32
     function addressToBytes32(address _addr) internal pure returns (bytes32) {
         return bytes32(uint256(uint160(_addr)));
+    }
+
+    // Helper function to check if a string starts with a prefix
+    function startsWith(string memory str, string memory prefix) internal pure returns (bool) {
+        bytes memory strBytes = bytes(str);
+        bytes memory prefixBytes = bytes(prefix);
+        
+        if (strBytes.length < prefixBytes.length) {
+            return false;
+        }
+        
+        for (uint256 i = 0; i < prefixBytes.length; i++) {
+            if (strBytes[i] != prefixBytes[i]) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     // Helper function to get token address from OFT adapter
