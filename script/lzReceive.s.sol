@@ -103,20 +103,23 @@ contract SimulateReceive is Script {
         uint256 amount;
         if (payload.length >= 64) {
             assembly {
-                recipient := mload(add(payload, 32))
-                amount := mload(add(payload, 64))
+                // Skip the first 32 bytes (length prefix) and read the next 32 bytes for recipient
+                recipient := mload(add(payload, 0x20))
+                // Read the next 32 bytes for amount
+                amount := mload(add(payload, 0x40))
             }
         }
         console.log("=== DEBUGGING INFO ===");
+        console.log("Payload length:", payload.length);
         console.log("Recipient from payload:", recipient);
-        console.log("Amount from payload:", amount);
+        console.log("Amount from payload (hex):");
+        console.logBytes32(bytes32(amount));
         
         // Get token address from the OFT adapter
-        address tokenAddress;
-        try IOAppCore(receiver).token() returns (address token) {
-            tokenAddress = token;
+        address tokenAddress = getTokenAddressInternal(receiver);
+        if (tokenAddress != address(0)) {
             console.log("Token address:", tokenAddress);
-        } catch {
+        } else {
             console.log("Could not get token address");
         }
         
@@ -199,8 +202,13 @@ contract SimulateReceive is Script {
                         selector := mload(add(lowLevelData, 32))
                     }
                     if (selector == 0x08c379a0) {
+                        // Create a new bytes array without the selector
+                        bytes memory errorData = new bytes(lowLevelData.length - 4);
+                        for (uint i = 0; i < errorData.length; i++) {
+                            errorData[i] = lowLevelData[i + 4];
+                        }
                         // Decode the string
-                        string memory errorMessage = abi.decode(lowLevelData[4:], (string));
+                        string memory errorMessage = abi.decode(errorData, (string));
                         console.log("Decoded error message:", errorMessage);
                     }
                 }
@@ -216,5 +224,22 @@ contract SimulateReceive is Script {
     // Helper function to convert address to bytes32
     function addressToBytes32(address _addr) internal pure returns (bytes32) {
         return bytes32(uint256(uint160(_addr)));
+    }
+
+    // Helper function to get token address from OFT adapter
+    function getTokenAddressInternal(address oftAdapter) internal view returns (address) {
+        // Try different possible function signatures for getting token address
+        (bool success, bytes memory data) = oftAdapter.staticcall(abi.encodeWithSignature("token()"));
+        if (success && data.length >= 32) {
+            return abi.decode(data, (address));
+        }
+        
+        // Fallback: try innerToken() for MintBurnOFTAdapter
+        (success, data) = oftAdapter.staticcall(abi.encodeWithSignature("innerToken()"));
+        if (success && data.length >= 32) {
+            return abi.decode(data, (address));
+        }
+        
+        return address(0);
     }
 }
