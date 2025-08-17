@@ -62,8 +62,11 @@ contract SimulateReceive is Script {
             // Ensure the decoded address is 32 bytes long
             require(decodedAddress.length == 32, "Decoded address must be 32 bytes");
             senderBytes32 = bytes32(decodedAddress);
+        } else if (startsWith(senderChain, "aptos")) {
+            // Aptos/Move: Direct hex to bytes32 conversion (64 hex chars -> 32 bytes)
+            senderBytes32 = hexStringToBytes32(senderAddressStr);
         } else {
-            // Otherwise, read the address directly and convert to bytes32
+            // EVM chains: Use parseJsonAddress for 20-byte addresses
             address senderAddress = json.readAddress(".data[0].pathway.sender.address");
             senderBytes32 = addressToBytes32(senderAddress);
         }
@@ -259,5 +262,18 @@ contract SimulateReceive is Script {
         }
         
         return address(0);
+    }
+
+    // Helper function to convert hex string to bytes32 for Aptos addresses
+    function hexStringToBytes32(string memory hexStr) internal pure returns (bytes32) {
+        bytes memory hexBytes = bytes(hexStr);
+        require(hexBytes.length == 66, "Hex string must be 66 characters (0x + 64 hex chars)");
+        require(hexBytes[0] == '0' && hexBytes[1] == 'x', "Hex string must start with 0x");
+        
+        bytes32 result;
+        assembly {
+            result := mload(add(hexBytes, 34)) // Skip length (32) + "0x" (2) = 34
+        }
+        return result;
     }
 }
