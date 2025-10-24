@@ -11,6 +11,10 @@ import { MessagingFee } from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import { ILayerZeroEndpointV2, Origin } from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+interface IOFTCoreLike {
+    function decimalConversionRate() external view returns (uint256);
+}
+
 contract SimulateReceive is Script {
     using stdJson for string;
     using Base58Decoder for string; // Use the library
@@ -90,6 +94,10 @@ contract SimulateReceive is Script {
         bytes memory payload = json.readBytes(".data[0].source.tx.payload");
 
         console.log("Invoking lzReceive...");
+        console.log("=== EXECUTION DETAILS ===");
+        console.log("Source EID:", srcEid);
+        console.log("Nonce being executed:", nonce);
+        console.logBytes32(senderBytes32);
 
         // Construct the Origin struct
         Origin memory origin = Origin({
@@ -100,71 +108,113 @@ contract SimulateReceive is Script {
         bytes memory extraData = "";
 
         // === ENHANCED ERROR HANDLING AND DEBUGGING ===
-        
-        // Extract recipient and amount from payload for debugging
+        // Decode OFT payload: [bytes32 to][uint64 amountSD][optional compose...]
         address recipient;
-        uint256 amount;
-        if (payload.length >= 64) {
+        uint64 amountSD;
+        uint256 amountLD;
+        if (payload.length >= 40) {
+            bytes32 sendToB32;
             assembly {
-                // Skip the first 32 bytes (length prefix) and read the next 32 bytes for recipient
-                recipient := mload(add(payload, 0x20))
-                // Read the next 32 bytes for amount
-                amount := mload(add(payload, 0x40))
+                sendToB32 := mload(add(payload, 0x20))
+                let word := mload(add(payload, 0x40))
+                amountSD := shr(192, word)
             }
+            recipient = address(uint160(uint256(sendToB32)));
+            uint256 dcr;
+            // try to read decimalConversionRate from the adapter; default to 1 if not available
+            try IOFTCoreLike(receiver).decimalConversionRate() returns (uint256 rate) {
+                dcr = rate;
+            } catch {
+                dcr = 1;
+            }
+            amountLD = uint256(amountSD) * dcr;
         }
         console.log("=== DEBUGGING INFO ===");
         console.log("Payload length:", payload.length);
-        console.log("Recipient from payload:", recipient);
-        console.log("Amount from payload (hex):");
-        console.logBytes32(bytes32(amount));
-        
-        // Get token address from the OFT adapter
+        console.log("Recipient (decoded):", recipient);
+        console.log("AmountSD (uint64):", uint256(amountSD));
+        console.log("AmountLD (uint256):", amountLD);
+        if (receiver != address(0)) {
+            console.log("Adapter native balance (wei):", receiver.balance);
+            if (amountLD > 0 && receiver.balance < amountLD) {
+                console.log("WARNING: Adapter lacks native to credit amountLD. Expect revert.");
+            }
+        }
+
+        // Peer check
+        try IOAppCore(receiver).peers(srcEid) returns (bytes32 configuredPeer) {
+            console.log("Configured peer:");
+            console.logBytes32(configuredPeer);
+            console.log("Sender from API:");
+            console.logBytes32(senderBytes32);
+            if (configuredPeer != senderBytes32) {
+                console.log("WARNING: Configured peer mismatch; OnlyPeer would revert.");
+            }
+        } catch {}
+
+        // Determine token address (NativeOFTAdapter returns address(0))
         address tokenAddress = getTokenAddressInternal(receiver);
         if (tokenAddress != address(0)) {
             console.log("Token address:", tokenAddress);
         } else {
-            console.log("Could not get token address");
+            console.log("Adapter is native (token() == address(0))");
         }
-        
+
         // Check recipient balance before
         uint256 balanceBefore;
-        if (tokenAddress != address(0) && recipient != address(0)) {
-            try IERC20(tokenAddress).balanceOf(recipient) returns (uint256 balance) {
-                balanceBefore = balance;
-                console.log("Recipient balance before:", balanceBefore);
-            } catch {
-                console.log("Could not check balance before");
+        if (recipient != address(0)) {
+            if (tokenAddress != address(0)) {
+                try IERC20(tokenAddress).balanceOf(recipient) returns (uint256 balanceErc20) {
+                    balanceBefore = balanceErc20;
+                    console.log("Recipient token balance before:", balanceBefore);
+                } catch {
+                    console.log("Could not check ERC20 balance before");
+                }
+            } else {
+                balanceBefore = recipient.balance;
+                console.log("Recipient native balance before (wei):", balanceBefore);
             }
         }
 
         // Simulate the lzReceive function with enhanced error handling
         vm.startBroadcast();
-        
+        bool ok = _executeLzReceive(receiver, origin, guid, payload, extraData);
+        vm.stopBroadcast();
+
+        if (ok && recipient != address(0)) {
+            if (tokenAddress != address(0)) {
+                try IERC20(tokenAddress).balanceOf(recipient) returns (uint256 balanceAfterErc20) {
+                    console.log("Recipient token balance after:", balanceAfterErc20);
+                    console.log("Tokens minted/credited:", balanceAfterErc20 - balanceBefore);
+                } catch {
+                    console.log("Could not check ERC20 balance after");
+                }
+            } else {
+                uint256 balanceAfterNative = recipient.balance;
+                console.log("Recipient native balance after (wei):", balanceAfterNative);
+                console.log("Native credited (wei):", balanceAfterNative - balanceBefore);
+            }
+        }
+    }
+
+    function _executeLzReceive(
+        address receiver,
+        Origin memory origin,
+        bytes32 guid,
+        bytes memory payload,
+        bytes memory extraData
+    ) internal returns (bool ok) {
         uint256 gasStart = gasleft();
         console.log("Gas available at start:", gasStart);
-        
         try IOAppCore(receiver).endpoint().lzReceive(origin, receiver, guid, payload, extraData) {
             console.log("=== SUCCESS ===");
-            
-            // Check balance after success
-            if (tokenAddress != address(0) && recipient != address(0)) {
-                try IERC20(tokenAddress).balanceOf(recipient) returns (uint256 balanceAfter) {
-                    console.log("Recipient balance after:", balanceAfter);
-                    console.log("Tokens minted:", balanceAfter - balanceBefore);
-                } catch {
-                    console.log("Could not check balance after");
-                }
-            }
-            
+            ok = true;
         } catch Error(string memory reason) {
             console.log("=== STRING REVERT ===");
             console.log("Revert reason:", reason);
-            
         } catch Panic(uint errorCode) {
             console.log("=== PANIC ERROR ===");
             console.log("Panic code:", errorCode);
-            
-            // Decode common panic codes
             if (errorCode == 0x01) {
                 console.log("Panic type: Assertion failed (assert)");
             } else if (errorCode == 0x11) {
@@ -186,42 +236,32 @@ contract SimulateReceive is Script {
             } else {
                 console.log("Panic type: Unknown");
             }
-            
         } catch (bytes memory lowLevelData) {
             console.log("=== LOW LEVEL REVERT ===");
             console.log("Revert data length:", lowLevelData.length);
-            
             if (lowLevelData.length == 0) {
                 console.log("Empty revert data - likely assertion failure or require() without message");
             } else {
                 console.log("Raw revert data:");
                 console.logBytes(lowLevelData);
-                
-                // Try to decode as string
                 if (lowLevelData.length >= 68) {
-                    // Check if it starts with Error(string) selector (0x08c379a0)
                     bytes4 selector;
                     assembly {
                         selector := mload(add(lowLevelData, 32))
                     }
                     if (selector == 0x08c379a0) {
-                        // Create a new bytes array without the selector
                         bytes memory errorData = new bytes(lowLevelData.length - 4);
                         for (uint i = 0; i < errorData.length; i++) {
                             errorData[i] = lowLevelData[i + 4];
                         }
-                        // Decode the string
                         string memory errorMessage = abi.decode(errorData, (string));
                         console.log("Decoded error message:", errorMessage);
                     }
                 }
             }
         }
-        
         uint256 gasEnd = gasleft();
         console.log("Gas used:", gasStart - gasEnd);
-        
-        vm.stopBroadcast();
     }
 
     // Helper function to convert address to bytes32

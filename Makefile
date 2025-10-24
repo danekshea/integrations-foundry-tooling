@@ -8,5 +8,11 @@ export $(shell sed 's/=.*//' .env)
 simulate:
 	forge script script/lzReceive.s.sol --rpc-url $(DESTINATION_CHAIN_RPC_URL) --account $(CAST_ACCOUNT) -vvvv
 
+simulate-compose:
+	forge script script/lzCompose.s.sol --rpc-url $(DESTINATION_CHAIN_RPC_URL) --account $(CAST_ACCOUNT) -vvvv
+
 broadcast:
-	forge script script/lzReceive.s.sol --rpc-url $(DESTINATION_CHAIN_RPC_URL) --account $(CAST_ACCOUNT) --broadcast
+	forge script script/lzReceive.s.sol --rpc-url $(DESTINATION_CHAIN_RPC_URL) --account $(CAST_ACCOUNT) --broadcast -vvvv
+
+broadcast-force:
+	forge script script/lzReceive.s.sol --rpc-url $(DESTINATION_CHAIN_RPC_URL) --account $(CAST_ACCOUNT) --broadcast --legacy --skip-simulation --with-gas-price 6000000000 -vvvv
