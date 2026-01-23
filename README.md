@@ -2,13 +2,12 @@
 
 ```shell
 cp .env.example .env
-yarn
+pnpm install
 forge build
 ```
 
 1. Find the source transaction hash of the message that has failed on [LayerZero Scan](https://layerzeroscan.com)
 2. Populate the [.env](.env.example) file with the following:
-
    - `SOURCE_CHAIN_TX_HASH=<your_source_tx_hash>`
    - `MAINNET=true` or `MAINNET=false` (for the scan API)
    - `DESTINATION_CHAIN_RPC_URL=<your_rpc_url>` (can use shortcuts from [foundry.toml](foundry.toml), e.g. `eth`, `bnb`)
