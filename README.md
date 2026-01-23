@@ -12,6 +12,7 @@ forge build
    - `MAINNET=true` or `MAINNET=false` (for the scan API)
    - `DESTINATION_CHAIN_RPC_URL=<your_rpc_url>` (can use shortcuts from [foundry.toml](foundry.toml), e.g. `eth`, `bnb`)
    - `CAST_ACCOUNT=<your_cast_account>` (use `cast wallet import -i <ACCOUNT_NAME>` to import a private key)
+   - `COMPOSE_VALUE_BUFFER_PERCENT=50` (optional, buffer % added to compose value for gas fluctuations, default: 50)
 
 3. Run the appropriate command:
 

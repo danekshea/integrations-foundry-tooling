@@ -145,9 +145,11 @@ contract SimulateCompose is Script {
     }
     
     function _executeLzCompose(ComposeParams memory params, bytes memory composeMessage) internal {
-        // Add 50% buffer for gas price fluctuations
-        uint256 valueWithBuffer = params.composeValue * 150 / 100;
-        console.log("Value with 50%% buffer (wei):", valueWithBuffer);
+        // Add buffer for gas price fluctuations (configurable via COMPOSE_VALUE_BUFFER_PERCENT env var)
+        uint256 bufferPercent = vm.envOr("COMPOSE_VALUE_BUFFER_PERCENT", uint256(50));
+        uint256 valueWithBuffer = params.composeValue * (100 + bufferPercent) / 100;
+        console.log("Buffer percent:", bufferPercent);
+        console.log("Value with buffer (wei):", valueWithBuffer);
 
         console.log("=== EXECUTING lzCompose ===");
         vm.startBroadcast();
