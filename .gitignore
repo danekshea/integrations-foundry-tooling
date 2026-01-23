@@ -17,3 +17,6 @@ node_modules
 
 # macOS system files
 .DS_Store
+
+# Temporary script data
+data/
