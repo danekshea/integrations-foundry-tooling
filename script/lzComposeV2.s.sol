@@ -22,7 +22,7 @@ interface IEndpointV2Compose {
     ) external view returns (bytes32);
 }
 
-contract SimulateCompose is Script {
+contract SimulateComposeV2 is Script {
     using stdJson for string;
 
     // Ethereum mainnet EndpointV2

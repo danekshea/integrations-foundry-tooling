@@ -15,7 +15,7 @@ interface IOFTCoreLike {
     function decimalConversionRate() external view returns (uint256);
 }
 
-contract SimulateReceive is Script {
+contract SimulateReceiveV2 is Script {
     using stdJson for string;
     using Base58Decoder for string; // Use the library
 
