@@ -66,8 +66,8 @@ contract SimulateReceiveV2 is Script {
             // Ensure the decoded address is 32 bytes long
             require(decodedAddress.length == 32, "Decoded address must be 32 bytes");
             senderBytes32 = bytes32(decodedAddress);
-        } else if (startsWith(senderChain, "aptos")) {
-            // Aptos/Move: Direct hex to bytes32 conversion (64 hex chars -> 32 bytes)
+        } else if (startsWith(senderChain, "aptos") || startsWith(senderChain, "movement")) {
+            // Aptos/Movement (Move VM): Direct hex to bytes32 conversion (64 hex chars -> 32 bytes)
             senderBytes32 = hexStringToBytes32(senderAddressStr);
         } else {
             // EVM chains: Use parseJsonAddress for 20-byte addresses
@@ -304,16 +304,23 @@ contract SimulateReceiveV2 is Script {
         return address(0);
     }
 
-    // Helper function to convert hex string to bytes32 for Aptos addresses
+    // Helper function to convert hex string to bytes32 for Aptos/Movement addresses
     function hexStringToBytes32(string memory hexStr) internal pure returns (bytes32) {
         bytes memory hexBytes = bytes(hexStr);
         require(hexBytes.length == 66, "Hex string must be 66 characters (0x + 64 hex chars)");
         require(hexBytes[0] == '0' && hexBytes[1] == 'x', "Hex string must start with 0x");
-        
-        bytes32 result;
-        assembly {
-            result := mload(add(hexBytes, 34)) // Skip length (32) + "0x" (2) = 34
+
+        uint256 result;
+        for (uint256 i = 2; i < 66; i++) {
+            result = (result << 4) | _hexCharToNibble(uint8(hexBytes[i]));
         }
-        return result;
+        return bytes32(result);
+    }
+
+    function _hexCharToNibble(uint8 c) private pure returns (uint256) {
+        if (c >= 0x30 && c <= 0x39) return c - 0x30;       // '0'-'9'
+        if (c >= 0x61 && c <= 0x66) return c - 0x61 + 10;  // 'a'-'f'
+        if (c >= 0x41 && c <= 0x46) return c - 0x41 + 10;  // 'A'-'F'
+        revert("Invalid hex character");
     }
 }
