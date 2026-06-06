@@ -12,16 +12,25 @@ forge build
    - `MAINNET=true` or `MAINNET=false` (for the scan API)
    - `DESTINATION_CHAIN_RPC_URL=<your_rpc_url>` (can use shortcuts from [foundry.toml](foundry.toml), e.g. `eth`, `bnb`)
    - `CAST_ACCOUNT=<your_cast_account>` (use `cast wallet import -i <ACCOUNT_NAME>` to import a private key)
+   - `KEYSTORE_PASSWORD=<your_password>` (optional, skips the keystore prompt for unattended runs; leave unset for the interactive prompt). Note: the value is passed to the shell unquoted via `${KEYSTORE_PASSWORD+--password=$KEYSTORE_PASSWORD}`, so passwords containing spaces, `$`, or other shell-special characters will be mangled by word splitting — for those, use the interactive prompt or wrap your make invocation (e.g. `KEYSTORE_PASSWORD=$(op read ...) make broadcast-v2`) so the password never lives in `.env`.
    - `COMPOSE_VALUE_BUFFER_PERCENT=50` (optional, buffer % added to compose value for gas fluctuations, default: 50)
 
 3. Run the appropriate command:
 
-| Command                  | Description                     |
-| ------------------------ | ------------------------------- |
-| `make simulate`          | Simulate lzReceive execution    |
-| `make broadcast`         | Broadcast lzReceive transaction |
-| `make simulate-compose`  | Simulate lzCompose execution    |
-| `make broadcast-compose` | Broadcast lzCompose transaction |
+| Command                        | Description                              |
+| ------------------------------ | ---------------------------------------- |
+| `make simulate-v2`             | Simulate lzReceive execution             |
+| `make broadcast-v2`            | Broadcast lzReceive transaction           |
+| `make simulate-v2-zksync`      | Simulate lzReceive execution (zkSync)    |
+| `make broadcast-v2-zksync`     | Broadcast lzReceive transaction (zkSync) |
+| `make simulate-v2-compose`     | Simulate lzCompose execution             |
+| `make broadcast-v2-compose`    | Broadcast lzCompose transaction           |
+| `make simulate-v2-compose-zksync`  | Simulate lzCompose execution (zkSync)    |
+| `make broadcast-v2-compose-zksync` | Broadcast lzCompose transaction (zkSync) |
+| `make simulate-v2-commit`      | Simulate commitVerification execution    |
+| `make broadcast-v2-commit`     | Broadcast commitVerification transaction |
+| `make simulate-v2-commit-zksync`   | Simulate commitVerification execution (zkSync)    |
+| `make broadcast-v2-commit-zksync`  | Broadcast commitVerification transaction (zkSync) |
 
 Alternatively, edit the [Makefile](Makefile) to use `--private-key <PRIVATE_KEY>` instead of `--account`.
 
