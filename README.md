@@ -31,6 +31,23 @@ forge build
 | `make broadcast-v2-commit`     | Broadcast commitVerification transaction |
 | `make simulate-v2-commit-zksync`   | Simulate commitVerification execution (zkSync)    |
 | `make broadcast-v2-commit-zksync`  | Broadcast commitVerification transaction (zkSync) |
+| `make simulate-solana`         | Simulate lzReceive on a **Solana** destination |
+| `make broadcast-solana`        | Broadcast lzReceive on a **Solana** destination |
+
+### Solana destinations
+
+When the message's destination is Solana (EID 30168/40168), the EVM forge scripts don't apply — use the `-solana` targets instead. They fetch every parameter from LayerZero Scan via `SOURCE_CHAIN_TX_HASH` (same as the EVM flow) and self-execute `lzReceive` on Solana, so you deliver a stuck message by acting as the executor yourself.
+
+This is the fix for messages that fail with `InsufficientBalance (6014 / 0x177e)` in the executor's PostExecute — i.e. the source send used `value: 0` and the executor couldn't cover the recipient's Associated Token Account (ATA) rent. You cannot change the options on an already-sent packet, but `lzReceive` on Solana is permissionless, so you fund the ~0.0025 SOL of ATA rent + fees yourself.
+
+Extra `.env` for Solana (see [.env.example](.env.example)):
+
+- `SOLANA_KEYPAIR` — fee-payer keypair (defaults to `~/.config/solana/id.json`). This is **not** the `CAST_ACCOUNT` keystore used by the EVM targets.
+- `SOLANA_RPC_URL` — defaults to the public endpoint for the selected `MAINNET`; use a private RPC for reliability.
+- `SOLANA_VALUE_LAMPORTS` — optional override; defaults to the source option value, floored to 2,500,000 lamports to cover ATA creation.
+- `SOLANA_COMPUTE_UNITS` — optional CU limit (default 200000).
+
+Always run `make simulate-solana` first — it runs an on-chain `simulateTransaction` and prints the program logs. If the message was already delivered it surfaces `AccountNotInitialized (3012 / 0xbc4)` on `payload_hash`, so you don't waste a broadcast.
 
 Alternatively, edit the [Makefile](Makefile) to use `--private-key <PRIVATE_KEY>` instead of `--account`.
 

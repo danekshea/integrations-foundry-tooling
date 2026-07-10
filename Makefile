@@ -15,7 +15,8 @@ GAS_MULT_OPT = $(if $(strip $(GAS_ESTIMATE_MULTIPLIER)),--gas-estimate-multiplie
 .PHONY: simulate-v1 broadcast-v1 broadcast-v1-force \
         simulate-v2 simulate-v2-zksync simulate-v2-compose simulate-v2-compose-zksync simulate-v2-commit simulate-v2-commit-zksync \
         broadcast-v2 broadcast-v2-zksync broadcast-v2-compose broadcast-v2-compose-zksync broadcast-v2-commit broadcast-v2-commit-zksync \
-        broadcast-v2-force broadcast-v2-commit-force
+        broadcast-v2-force broadcast-v2-commit-force \
+        simulate-solana broadcast-solana
 
 # ============================================
 # LayerZero V1 Targets (for retrying stored payloads)
@@ -103,3 +104,15 @@ broadcast-v2-commit-zksync:
 
 broadcast-v2-commit-force:
 	forge script script/commitVerificationV2.s.sol --rpc-url $(DESTINATION_CHAIN_RPC_URL) --account $(CAST_ACCOUNT) $(PASSWORD_OPT) --broadcast $(GAS_MULT_OPT) --legacy --skip-simulation --with-gas-price 6000000000 -vvvv
+
+# ============================================
+# LayerZero Solana Targets (inbound to Solana)
+# ============================================
+# Self-execute a stuck EVM->Solana message. Params are fetched from LayerZero Scan
+# using SOURCE_CHAIN_TX_HASH (+ MAINNET). Signs with SOLANA_KEYPAIR (default
+# ~/.config/solana/id.json) and funds ATA rent + fees from your own SOL. See README.
+simulate-solana:
+	SIMULATE=true node_modules/.bin/ts-node script/lzReceiveSolana.ts
+
+broadcast-solana:
+	node_modules/.bin/ts-node script/lzReceiveSolana.ts

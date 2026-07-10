@@ -28,6 +28,7 @@
     "@layerzerolabs/lz-evm-messagelib-v2": "^2.3.34",
     "@layerzerolabs/lz-evm-protocol-v2": "^2.3.34",
     "@layerzerolabs/lz-evm-v1-0.7": "^2.3.34",
+    "@layerzerolabs/lz-solana-sdk-v2": "^3.0.168",
     "@layerzerolabs/lz-v2-utilities": "^2.3.34",
     "@layerzerolabs/oapp-evm": "^0.0.2",
     "@layerzerolabs/oft-evm": "^0.0.9",
@@ -36,11 +37,15 @@
     "@layerzerolabs/test-devtools-evm-foundry": "~0.2.10",
     "@layerzerolabs/toolbox-foundry": "~0.1.9",
     "@layerzerolabs/toolbox-hardhat": "~0.3.3",
+    "@metaplex-foundation/umi": "^0.9.2",
+    "@metaplex-foundation/umi-bundle-defaults": "^0.9.2",
+    "@metaplex-foundation/umi-web3js-adapters": "^0.9.2",
     "@nomicfoundation/hardhat-ethers": "^3.0.5",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@openzeppelin/contracts": "^5.0.2",
     "@openzeppelin/contracts-upgradeable": "^5.0.2",
     "@rushstack/eslint-patch": "^1.7.0",
+    "@solana/web3.js": "^1.95.8",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
     "@types/node": "~18.18.14",
@@ -65,11 +70,13 @@
   "pnpm": {
     "overrides": {
       "ethers": "^5.7.2",
-      "hardhat-deploy": "^0.12.1"
+      "hardhat-deploy": "^0.12.1",
+      "uuid": "^9.0.1"
     }
   },
   "overrides": {
     "ethers": "^5.7.2",
-    "hardhat-deploy": "^0.12.1"
+    "hardhat-deploy": "^0.12.1",
+    "uuid": "^9.0.1"
   }
 }
