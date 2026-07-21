@@ -69,6 +69,11 @@ contract SimulateReceiveV2 is Script {
         } else if (startsWith(senderChain, "aptos") || startsWith(senderChain, "movement")) {
             // Aptos/Movement (Move VM): Direct hex to bytes32 conversion (64 hex chars -> 32 bytes)
             senderBytes32 = hexStringToBytes32(senderAddressStr);
+        } else if (bytes(senderAddressStr).length == 66) {
+            // Other non-EVM chains that expose a 32-byte hex sender address
+            // (e.g. Starknet, TON): "0x" + 64 hex chars. readAddress would revert
+            // on these ("invalid string length"), so decode the full 32 bytes.
+            senderBytes32 = hexStringToBytes32(senderAddressStr);
         } else {
             // EVM chains: Use parseJsonAddress for 20-byte addresses
             address senderAddress = json.readAddress(".data[0].pathway.sender.address");
