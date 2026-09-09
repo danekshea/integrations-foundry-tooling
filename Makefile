@@ -16,7 +16,8 @@ GAS_MULT_OPT = $(if $(strip $(GAS_ESTIMATE_MULTIPLIER)),--gas-estimate-multiplie
         simulate-v2 simulate-v2-zksync simulate-v2-compose simulate-v2-compose-zksync simulate-v2-commit simulate-v2-commit-zksync \
         broadcast-v2 broadcast-v2-zksync broadcast-v2-compose broadcast-v2-compose-zksync broadcast-v2-commit broadcast-v2-commit-zksync \
         broadcast-v2-force broadcast-v2-commit-force \
-        simulate-solana broadcast-solana
+        simulate-solana broadcast-solana \
+        simulate-starknet broadcast-starknet
 
 # ============================================
 # LayerZero V1 Targets (for retrying stored payloads)
@@ -116,3 +117,16 @@ simulate-solana:
 
 broadcast-solana:
 	node_modules/.bin/ts-node script/lzReceiveSolana.ts
+
+# ============================================
+# LayerZero Starknet Targets (inbound to Starknet)
+# ============================================
+# Self-execute a stuck EVM->Starknet message. Params are fetched from LayerZero Scan
+# using SOURCE_CHAIN_TX_HASH (+ MAINNET). forge/cast cannot reach Starknet, so this
+# shells out to `sncast` (Starknet Foundry) for account signing and fee estimation.
+# Requires sncast on PATH and an imported account (see README).
+simulate-starknet:
+	SIMULATE=true node_modules/.bin/ts-node script/lzReceiveStarknet.ts
+
+broadcast-starknet:
+	node_modules/.bin/ts-node script/lzReceiveStarknet.ts

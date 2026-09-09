@@ -21,3 +21,4 @@ node_modules
 
 # Temporary script data
 data/
+.env.bak*
